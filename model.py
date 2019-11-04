@@ -5,7 +5,6 @@ from network import TextEncoder, AudioEncoder, AudioDecoder, DotProductAttention
 from torch.nn.utils import weight_norm as norm
 
 import layers as ll
-import module as mm
 
 
 class Text2Mel(nn.Module):
@@ -61,26 +60,26 @@ class SSRN(nn.Module):
         super(SSRN, self).__init__()
         self.name = 'SSRN'
         # (N, n_mels, Ty/r) -> (N, Cs, Ty/r)
-        self.hc_blocks = nn.ModuleList([norm(mm.Conv1d(args.n_mels, args.Cs, 1, activation_fn=torch.relu))])
-        self.hc_blocks.extend([norm(mm.HighwayConv1d(args.Cs, args.Cs, 3, dilation=3**i))
+        self.hc_blocks = nn.ModuleList([norm(ll.Conv1d(args.n_mels, args.Cs, 1, activation_fn=torch.relu))])
+        self.hc_blocks.extend([norm(ll.HighwayConv1d(args.Cs, args.Cs, 3, dilation=3**i))
                                for i in range(2)])
         # (N, Cs, Ty/r*2) -> (N, Cs, Ty/r*2)
-        self.hc_blocks.extend([norm(mm.ConvTranspose1d(args.Cs, args.Cs, 4, stride=2, padding=1))])
-        self.hc_blocks.extend([norm(mm.HighwayConv1d(args.Cs, args.Cs, 3, dilation=3**i))
+        self.hc_blocks.extend([norm(ll.ConvTranspose1d(args.Cs, args.Cs, 4, stride=2, padding=1))])
+        self.hc_blocks.extend([norm(ll.HighwayConv1d(args.Cs, args.Cs, 3, dilation=3**i))
                                for i in range(2)])
         # (N, Cs, Ty/r*2) -> (N, Cs, Ty/r*4==Ty)
-        self.hc_blocks.extend([norm(mm.ConvTranspose1d(args.Cs, args.Cs, 4, stride=2, padding=1))])
-        self.hc_blocks.extend([norm(mm.HighwayConv1d(args.Cs, args.Cs, 3, dilation=3**i))
+        self.hc_blocks.extend([norm(ll.ConvTranspose1d(args.Cs, args.Cs, 4, stride=2, padding=1))])
+        self.hc_blocks.extend([norm(ll.HighwayConv1d(args.Cs, args.Cs, 3, dilation=3**i))
                                for i in range(2)])
         # (N, Cs, Ty) -> (N, Cs*2, Ty)
-        self.hc_blocks.extend([norm(mm.Conv1d(args.Cs, args.Cs*2, 1))])
-        self.hc_blocks.extend([norm(mm.HighwayConv1d(args.Cs*2, args.Cs*2, 3, dilation=1))
+        self.hc_blocks.extend([norm(ll.Conv1d(args.Cs, args.Cs*2, 1))])
+        self.hc_blocks.extend([norm(ll.HighwayConv1d(args.Cs*2, args.Cs*2, 3, dilation=1))
                                for i in range(2)])
         # (N, Cs*2, Ty) -> (N, n_mags, Ty)
-        self.hc_blocks.extend([norm(mm.Conv1d(args.Cs*2, args.n_mags, 1))])
-        self.hc_blocks.extend([norm(mm.Conv1d(args.n_mags, args.n_mags, 1, activation_fn=torch.relu))
+        self.hc_blocks.extend([norm(ll.Conv1d(args.Cs*2, args.n_mags, 1))])
+        self.hc_blocks.extend([norm(ll.Conv1d(args.n_mags, args.n_mags, 1, activation_fn=torch.relu))
                                for i in range(2)])
-        self.hc_blocks.extend([norm(mm.Conv1d(args.n_mags, args.n_mags, 1))])
+        self.hc_blocks.extend([norm(ll.Conv1d(args.n_mags, args.n_mags, 1))])
 
     def forward(self, Y):
         Y = Y.transpose(1, 2) # -> (N, n_mels, Ty/r)
@@ -98,26 +97,20 @@ class ConditionalDiscriminatorBlock(nn.Module):
         self.c_net = nn.Sequential(
             # (N, 80, Tmel)
             ll.CustomConv1d(80, 256, kernel_size=1, stride=1, padding='same', lrelu=True),
-            ll.LeakyReLU(),
             # (N, 256, Tmel)
         )
         self.net = nn.ModuleList([
             # (N, n_mags, Tmel*4)
-            ll.CustomConv1d(args.n_mags, 64, kernel_size=3, stride=1, padding='same', lrelu=False),
-            ll.LeakyReLU(),
+            ll.CustomConv1d(args.n_mags, 64, kernel_size=3, stride=1, padding='same', lrelu=True),
             # (N, 16, Tmel*4)
-            ll.CustomConv1d(64, 128, kernel_size=5, stride=2, padding='same', lrelu=False),
-            ll.LeakyReLU(),
+            ll.CustomConv1d(64, 128, kernel_size=5, stride=2, padding='same', lrelu=True),
             # (N, 64, Tmel*2)
-            ll.CustomConv1d(128, 256, kernel_size=5, stride=2, padding='same', lrelu=False),
-            ll.LeakyReLU(),
+            ll.CustomConv1d(128, 256, kernel_size=5, stride=2, padding='same', lrelu=True),
             # (N, 256, Tmel)
         ])
         self.postnet = nn.ModuleList([
-            ll.CustomConv1d(256, 256, kernel_size=3, stride=1, padding='same', lrelu=False),
-            ll.LeakyReLU(),
-            ll.CustomConv1d(256, 128, kernel_size=3, stride=1, padding='same', lrelu=False),
-            ll.LeakyReLU(),
+            ll.CustomConv1d(256, 256, kernel_size=3, stride=1, padding='same', lrelu=True),
+            ll.CustomConv1d(256, 128, kernel_size=3, stride=1, padding='same', lrelu=True),
             ll.CustomConv1d(128, 1, kernel_size=3, stride=1, padding='same', lrelu=False),
         ])
 

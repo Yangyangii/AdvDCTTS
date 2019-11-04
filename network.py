@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.nn.utils import weight_norm as norm
 import numpy as np
-import module as mm
+import layers as ll
 
 class TextEncoder(nn.Module):
     """
@@ -15,13 +15,13 @@ class TextEncoder(nn.Module):
     """
     def __init__(self):
         super(TextEncoder, self).__init__()
-        self.hc_blocks = nn.ModuleList([norm(mm.Conv1d(args.Ce, args.Cx*2, 1, padding='same', activation_fn=torch.relu))])  # filter up to split into K, V
-        self.hc_blocks.extend([norm(mm.Conv1d(args.Cx*2, args.Cx*2, 1, padding='same', activation_fn=None))])
-        self.hc_blocks.extend([norm(mm.HighwayConv1d(args.Cx*2, args.Cx*2, 3, dilation=3**i, padding='same'))
+        self.hc_blocks = nn.ModuleList([norm(ll.Conv1d(args.Ce, args.Cx*2, 1, padding='same', activation_fn=torch.relu))])  # filter up to split into K, V
+        self.hc_blocks.extend([norm(ll.Conv1d(args.Cx*2, args.Cx*2, 1, padding='same', activation_fn=None))])
+        self.hc_blocks.extend([norm(ll.HighwayConv1d(args.Cx*2, args.Cx*2, 3, dilation=3**i, padding='same'))
                                for _ in range(2) for i in range(4)])
-        self.hc_blocks.extend([norm(mm.HighwayConv1d(args.Cx*2, args.Cx*2, 3, dilation=1, padding='same'))
+        self.hc_blocks.extend([norm(ll.HighwayConv1d(args.Cx*2, args.Cx*2, 3, dilation=1, padding='same'))
                                for i in range(2)])
-        self.hc_blocks.extend([norm(mm.HighwayConv1d(args.Cx*2, args.Cx*2, 1, dilation=1, padding='same'))
+        self.hc_blocks.extend([norm(ll.HighwayConv1d(args.Cx*2, args.Cx*2, 1, dilation=1, padding='same'))
                                for i in range(2)])
 
     def forward(self, L):
@@ -41,14 +41,14 @@ class AudioEncoder(nn.Module):
 
     def __init__(self):
         super(AudioEncoder, self).__init__()
-        self.hc_blocks = nn.ModuleList([norm(mm.CausalConv1d(args.n_mels, args.Cx, 1, activation_fn=torch.relu))])
-        self.hc_blocks.extend([norm(mm.CausalConv1d(args.Cx, args.Cx, 1, activation_fn=torch.relu))
+        self.hc_blocks = nn.ModuleList([norm(ll.CausalConv1d(args.n_mels, args.Cx, 1, activation_fn=torch.relu))])
+        self.hc_blocks.extend([norm(ll.CausalConv1d(args.Cx, args.Cx, 1, activation_fn=torch.relu))
                                for _ in range(2)])
-        self.hc_blocks.extend([norm(mm.CausalHighwayConv1d(args.Cx, args.Cx, 3, dilation=3**i)) # i is in [[0,1,2,3],[0,1,2,3]]
+        self.hc_blocks.extend([norm(ll.CausalHighwayConv1d(args.Cx, args.Cx, 3, dilation=3**i)) # i is in [[0,1,2,3],[0,1,2,3]]
                                for _ in range(2) for i in range(4)])
-        self.hc_blocks.extend([norm(mm.CausalHighwayConv1d(args.Cx, args.Cx, 3, dilation=3))
+        self.hc_blocks.extend([norm(ll.CausalHighwayConv1d(args.Cx, args.Cx, 3, dilation=3))
                                for i in range(2)])
-        # self.hc_blocks.extend([mm.CausalConv1d(args.Cy, args.Cx, 1, dilation=1, activation_fn=torch.relu)]) # down #filters to dotproduct K, V
+        # self.hc_blocks.extend([ll.CausalConv1d(args.Cy, args.Cx, 1, dilation=1, activation_fn=torch.relu)]) # down #filters to dotproduct K, V
 
     def forward(self, S):
         Q = S
@@ -86,14 +86,14 @@ class AudioDecoder(nn.Module):
     """
     def __init__(self):
         super(AudioDecoder, self).__init__()
-        self.hc_blocks = nn.ModuleList([norm(mm.CausalConv1d(args.Cx*2, args.Cy, 1, activation_fn=torch.relu))])
-        self.hc_blocks.extend([norm(mm.CausalHighwayConv1d(args.Cy, args.Cy, 3, dilation=3**i))
+        self.hc_blocks = nn.ModuleList([norm(ll.CausalConv1d(args.Cx*2, args.Cy, 1, activation_fn=torch.relu))])
+        self.hc_blocks.extend([norm(ll.CausalHighwayConv1d(args.Cy, args.Cy, 3, dilation=3**i))
                                for i in range(4)])
-        self.hc_blocks.extend([norm(mm.CausalHighwayConv1d(args.Cy, args.Cy, 3, dilation=1))
+        self.hc_blocks.extend([norm(ll.CausalHighwayConv1d(args.Cy, args.Cy, 3, dilation=1))
                                for _ in range(2)])
-        self.hc_blocks.extend([norm(mm.CausalConv1d(args.Cy, args.Cy, 1, dilation=1, activation_fn=torch.relu))
+        self.hc_blocks.extend([norm(ll.CausalConv1d(args.Cy, args.Cy, 1, dilation=1, activation_fn=torch.relu))
                                for _ in range(3)])
-        self.hc_blocks.extend([norm(mm.CausalConv1d(args.Cy, args.n_mels, 1, dilation=1))]) # down #filters to dotproduct K, V
+        self.hc_blocks.extend([norm(ll.CausalConv1d(args.Cy, args.n_mels, 1, dilation=1))]) # down #filters to dotproduct K, V
 
     def forward(self, R_):
         Y = R_
