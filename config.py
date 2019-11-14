@@ -28,8 +28,8 @@ class ConfigArgs:
     hop_length = 256
     win_length = 1024
     gl_iter = 100 # Griffin-Lim iteration
-    max_db = 100
-    ref_db = 20
+    max_db = 250
+    ref_db = 50
     power = 1.2
     r = 4  # reduction factor. mel/4
     g = 0.2
