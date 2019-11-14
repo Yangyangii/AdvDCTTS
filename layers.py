@@ -29,7 +29,7 @@ class CustomConv1d(nn.Module):
 
     def forward(self, x): 
         y = self.conv(x)
-        y = self.lrelu(x) if self.lrelu is not None else x
+        y = self.lrelu(y) if self.lrelu is not None else y
         y = y[:, :, :-1] if self.even_kernel else y
         return y
 
