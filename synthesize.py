@@ -11,7 +11,7 @@ from tqdm import tqdm, trange
 
 import numpy as np
 import pandas as pd
-from model import Text2Mel, SSRN
+from models import Text2Mel, SSRN
 from data import TextDataset, synth_collate_fn, load_vocab
 import utils
 from scipy.io.wavfile import write
@@ -25,7 +25,6 @@ def synthesize(t2m, ssrn, data_loader, batch_size=100):
     # Text2Mel
     idx2char = load_vocab()[-1]
     with torch.no_grad():
-        print('='*10, ' Text2Mel ', '='*10)
         for step, (texts, _, _) in tqdm(enumerate(data_loader), total=len(data_loader), ncols=70):
             texts = texts.to(DEVICE)
             prev_mel_hats = torch.zeros([len(texts), args.max_Ty, args.n_mels]).to(DEVICE)
@@ -53,13 +52,13 @@ def main():
     ssrn = SSRN().to(DEVICE)
     
     mname = type(t2m).__name__
-    ckpt = sorted(glob.glob(os.path.join(args.logdir, mname, '{}-*k.pth'.format(mname))))
+    ckpt = sorted(glob.glob(os.path.join(args.logdir, mname, '*k.pth.tar')))
     state = torch.load(ckpt[-1])
     t2m.load_state_dict(state['model'])
     args.global_step = state['global_step']
 
     mname = type(ssrn).__name__
-    ckpt = sorted(glob.glob(os.path.join(args.logdir, mname, '{}-*k.pth'.format(mname))))
+    ckpt = sorted(glob.glob(os.path.join(args.logdir, mname, '*k.pth.tar')))
     state = torch.load(ckpt[-1])
     ssrn.load_state_dict(state['model'])
 

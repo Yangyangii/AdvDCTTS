@@ -1,4 +1,7 @@
 logs
 __pycache__
-samples
+samples*
 tests
+*bak
+tests*
+*.pyc

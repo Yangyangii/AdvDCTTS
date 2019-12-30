@@ -14,7 +14,7 @@ def load_spectrogram(fpath):
 
     ## Pre-processing
     wav, _ = librosa.effects.trim(wav)
-    # wav = np.append(wav[0], wav[1:] - args.preemph * wav[:-1])
+#     wav = np.append(wav[0], wav[1:] - 0.97 * wav[:-1])
     # STFT
     linear = librosa.stft(y=wav,
                           n_fft=args.n_fft,
@@ -33,14 +33,16 @@ def load_spectrogram(fpath):
     mag = 20 * np.log10(np.maximum(1e-5, mag))
 
     # normalize
-    mel = np.clip((mel - args.ref_db + args.max_db) / args.max_db, 1e-8, 1)
-    mag = np.clip((mag - args.ref_db + args.max_db) / args.max_db, 1e-8, 1)
+#     mel = np.clip((mel - ref_db + max_db) / max_db, 1e-8, 1)
+#     mag = np.clip((mag - ref_db + max_db) / max_db, 1e-8, 1)
+    mel = np.clip((mel - args.min_db) / (args.max_db-args.min_db), 1e-8, 1)
+    mag = np.clip((mag - args.min_db) / (args.max_db-args.min_db), 1e-8, 1)
 
     # Transpose
     mel = mel.T.astype(np.float32)  # (T, n_mels)
     mag = mag.T.astype(np.float32)  # (T, 1+n_fft//2)
 
-    mel, mag = padding_reduction(mel, mag)
+#     mel, mag = padding_reduction(mel, mag)
     return mel, mag
 
 def padding_reduction(mel, mag):
@@ -58,7 +60,7 @@ def spectrogram2wav(mag):
     mag = mag.T
 
     # de-normalize
-    mag = (np.clip(mag, 0, 1) * args.max_db) - args.max_db + args.ref_db
+    mag = (np.clip(mag, 0, 1) * (args.max_db-args.min_db)) + args.min_db
 
     # to amplitude
     mag = np.power(10.0, mag * 0.05)

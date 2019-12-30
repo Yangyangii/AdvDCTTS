@@ -5,7 +5,7 @@ from network import TextEncoder, AudioEncoder, AudioDecoder, DotProductAttention
 from torch.nn.utils import weight_norm as norm
 
 import layers as ll
-
+import modules as mm
 
 class Text2Mel(nn.Module):
     """
@@ -101,17 +101,21 @@ class ConditionalDiscriminatorBlock(nn.Module):
         )
         self.net = nn.ModuleList([
             # (N, n_mags, Tmel*4)
-            ll.CustomConv1d(args.n_mags, 64, kernel_size=3, stride=1, padding='same', lrelu=True),
-            # (N, 16, Tmel*4)
-            ll.CustomConv1d(64, 128, kernel_size=5, stride=2, padding='same', lrelu=True),
-            # (N, 64, Tmel*2)
-            ll.CustomConv1d(128, 256, kernel_size=5, stride=2, padding='same', lrelu=True),
-            # (N, 256, Tmel)
+            ll.CustomConv1d(args.n_mags, 64, kernel_size=5, stride=1, padding='same', lrelu=True),
+            mm.ResidualBlock1d(64, 128),
+            mm.ResidualBlock1d(128, 256),
+            nn.AvgPool1d(3, 2, padding=1), # (N, 256, Tmel*2)
+            mm.ResidualBlock1d(256, 256), 
+            nn.AvgPool1d(3, 2, padding=1), # (N, 256, Tmel)
+            mm.ResidualBlock1d(256, 256)
         ])
         self.postnet = nn.ModuleList([
-            ll.CustomConv1d(256, 256, kernel_size=3, stride=1, padding='same', lrelu=True),
-            ll.CustomConv1d(256, 128, kernel_size=3, stride=1, padding='same', lrelu=True),
-            ll.CustomConv1d(128, 1, kernel_size=3, stride=1, padding='same', lrelu=False),
+            mm.ResidualBlock1d(256, 512),
+            nn.AvgPool1d(3, 2, padding=1), # (N, 256, Tmel//2)
+            mm.ResidualBlock1d(512, 512),
+            nn.AvgPool1d(3, 2, padding=1), # (N, 256, Tmel//4)
+            mm.ResidualBlock1d(512, 256),
+            mm.ResidualBlock1d(256, 1)
         ])
 
     def forward(self, x, c):
@@ -119,12 +123,33 @@ class ConditionalDiscriminatorBlock(nn.Module):
         y = x
         for idx in range(len(self.net)):
             y = self.net[idx](y)
-            if idx % 2 == 1:
-                features_k.append(y) # append only after activation
+            features_k.append(y)
         c = self.c_net(c)
         y = y + c # (N, 256, Twav//256)
         for idx in range(len(self.postnet)):
             y = self.postnet[idx](y)
-            if idx % 2 == 1:
-                features_k.append(y) # append only after activation
+            features_k.append(y) # append only after activation
         return y, features_k
+
+class MultiScaleDiscriminator(nn.Module):
+    def __init__(self):
+        super(MultiScaleDiscriminator, self).__init__()
+        self.D = nn.ModuleList([
+            ConditionalDiscriminatorBlock()
+            for k in range(3)
+        ])
+        self.down = nn.AvgPool1d(5, 2, padding=2)
+
+    def forward(self, x, c):
+        features = []
+        ys = []
+        y = x
+        for idx in range(len(self.D)):
+            if idx > 0:
+                y = self.down(y)
+                c = self.down(c)
+            y_k, features_k = self.D[idx](y, c)
+            features.extend(features_k)
+            ys.append(y_k)
+        return ys, features
+

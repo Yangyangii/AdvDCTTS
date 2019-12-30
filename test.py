@@ -13,14 +13,14 @@ from tensorboardX import SummaryWriter
 import numpy as np
 import pandas as pd
 from collections import deque
-from model import *
+from models import *
 from data import SpeechDataset, collate_fn
 import utils
 from scipy.io.wavfile import write
 
 
 def evaluate(model, data_loader, batch_size=100):
-    valid_loss = 0.
+    # valid_loss = 0.
     with torch.no_grad():
         for step, (texts, mels, mags) in tqdm(enumerate(data_loader), total=len(data_loader)):
             texts, mels = texts.to(DEVICE), mels.to(DEVICE)
@@ -34,16 +34,16 @@ def evaluate(model, data_loader, batch_size=100):
                 write(os.path.join(args.testdir, '{:03d}-gen.wav'.format(fname)), args.sr, wav)
                 wav = utils.spectrogram2wav(mags[idx])
                 write(os.path.join(args.testdir, '{:03d}-gt.wav'.format(fname)), args.sr, wav)
-            # You can adjust # of test samples
-            if step > 10:
-                break
-    return avg_loss
+            # # You can adjust # of test samples
+            # if step > 2:
+            #     break
+    # print()
 
 def main():
     ssrn = SSRN().to(DEVICE)
 
     mname = type(ssrn).__name__
-    ckpt = sorted(glob.glob(os.path.join(args.logdir, mname, '{}-*k.pth'.format(mname))))
+    ckpt = sorted(glob.glob(os.path.join(args.logdir, mname, '{}-*k.pth.tar'.format(mname))))
     state = torch.load(ckpt[-1])
     ssrn.load_state_dict(state['model'])
 

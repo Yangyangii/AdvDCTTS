@@ -1,6 +1,6 @@
 
 class ConfigArgs:
-    model = 'Text2Mel' # Text2Mel, SSRN
+    model = 'SSRN' # Text2Mel, SSRN
     # speaker = 'kss'
     data_path = '/home/yangyangii/data/LJSpeech-1.1'
     mel_dir, mag_dir = 'd_mels', 'd_mags'
@@ -16,7 +16,7 @@ class ConfigArgs:
     mem_mode= True
     ga_mode = True
     log_mode = True
-    save_term = 1000
+    save_term = 5000
     n_workers = 8
     n_gpu = 1
     global_step = 0
@@ -28,15 +28,18 @@ class ConfigArgs:
     hop_length = 256
     win_length = 1024
     gl_iter = 100 # Griffin-Lim iteration
-    max_db = 250
-    ref_db = 50
+    max_db = 50
+    min_db = -100
     power = 1.2
     r = 4  # reduction factor. mel/4
     g = 0.2
 
     batch_size = 16
-    test_batch = 4 # for test
-    max_step = 400000
+    test_batch = 16 # for test
+    max_step = 1000000
+    begin_gan = 30000
+    n_critic = 1
+    lr_decay = False
     lr = 0.0001
     lr_decay_step = 50000 # actually not decayed per this step
     Ce = 128  # for text embedding and encoding
